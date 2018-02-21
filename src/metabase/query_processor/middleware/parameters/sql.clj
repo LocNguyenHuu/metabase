@@ -395,30 +395,15 @@
 
 (def ^:private sql-template-parser
   (insta/parser
-   "SQL := (ANYTHING_BUT_BRACE | PARAM | OPTIONAL)*
-
-    (* optional clauses don't support nesting, but can contains SQL text and params *)
-    OPTIONAL := <'[['> (ANYTHING_BUT_BRACE | PARAM)* <']]'>
-    <ANYTHING_BUT_BRACE> := (SQL_CHARS SINGLE_BRACE? SINGLE_BRACKET?)*
-
-    (* Any characters other than {,},[,]. Those need to be handled separately. *)
-    <SQL_CHARS> := #'[\\W\\w&&[^\\{\\}\\[\\]]]*'
-
-    (* Single braces/brackets can occur in SQL and should not be recognized as a param/optional *)
-    <SINGLE_BRACE> := '{' !'{' | '}' !'}'
-    <SINGLE_BRACKET> := '[' !'[' | ']' !']'
+   "SQL := (ANYTHING_NOT_RESERVED | SINGLE_BRACKET_PLUS_ANYTHING | OPTIONAL | PARAM)*
+    (* original <SINGLE_BRACKET_PLUS_ANYTHING> := !'[[' '['? ANYTHING_NOT_RESERVED !']]' ']'? *)
+    <SINGLE_BRACKET_PLUS_ANYTHING> := !'[[' '[' (ANYTHING_NOT_RESERVED | ']' | SINGLE_BRACKET_PLUS_ANYTHING )*
+    <ANYTHING_NOT_RESERVED> := #'[^\\[\\]\\{\\}]+'
+    <ANYTHING_BUT_BRACKETS> := #'[^\\[\\]]+'
     PARAM = <'{{'> <WHITESPACE*> TOKEN <WHITESPACE*> <'}}'>
-
-    (* Any word character is a valid token [a-zA-Z_0-9] *)
+    OPTIONAL := <'[['> (ANYTHING_NOT_RESERVED | SINGLE_BRACKET_PLUS_ANYTHING | PARAM)* <']]'>
     <TOKEN>    := #'(\\w)+'
-    WHITESPACE := #'\\s'"))
-
-(def ^:private sql-template-parser2
-  (insta/parser
-   "SQL := (ANYTHING_BUT_BRACE | SINGLE_BRACE_PLUS_ANYTHING | OPTIONAL_CLAUSE)*
-    SINGLE_BRACE_PLUS_ANYTHING := !'[[' '['? ANYTHING_BUT_BRACE !']]' ']'?
-    <ANYTHING_BUT_BRACE> := #'[^\\[\\]]+'
-    OPTIONAL_CLAUSE := <'[['> ANYTHING_BUT_BRACE <']]'>"))
+    WHITESPACE := #'\\s+'"))
 
 (defrecord ^:private Param [param-key sql-value prepared-statement-args])
 

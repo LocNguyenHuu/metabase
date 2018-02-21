@@ -13,6 +13,39 @@
              [generic-sql :as generic-sql]]
             [toucan.db :as db]))
 
+;;; ------------------------------------------ basic parser tests ------------------------------------------
+
+(expect
+  [:SQL "select * from foo where bar=1"]
+  (#'sql/sql-template-parser "select * from foo where bar=1"))
+
+(expect
+  [:SQL "select * from foo where bar=" [:PARAM "baz"]]
+  (#'sql/sql-template-parser "select * from foo where bar={{baz}}"))
+
+(expect
+  [:SQL "select * from foo " [:OPTIONAL "where bar = " [:PARAM "baz"] " "]]
+  (#'sql/sql-template-parser "select * from foo [[where bar = {{baz}} ]]"))
+
+(expect
+  [:SQL "select * from foobars "
+   [:OPTIONAL " where foobars.id in (string_to_array(" [:PARAM "foobar_id"] ", ',')::integer" "[" "]" ") "]]
+  (#'sql/sql-template-parser "select * from foobars [[ where foobars.id in (string_to_array({{foobar_id}}, ',')::integer[]) ]]"))
+
+(expect
+  [:SQL
+   "SELECT " "[" "test_data.checkins.venue_id" "]" " AS " "[" "venue_id" "]"
+   ",        " "[" "test_data.checkins.user_id" "]" " AS " "[" "user_id" "]"
+   ",        " "[" "test_data.checkins.id" "]" " AS " "[" "checkins_id" "]"
+   " FROM " "[" "test_data.checkins" "]" " LIMIT 2"]
+  (-> (str "SELECT [test_data.checkins.venue_id] AS [venue_id], "
+             "       [test_data.checkins.user_id] AS [user_id], "
+             "       [test_data.checkins.id] AS [checkins_id] "
+             "FROM [test_data.checkins] "
+             "LIMIT 2")
+      (#'sql/sql-template-parser)
+      (update 1 #(apply str %))))
+
 ;;; ------------------------------------------ simple substitution -- {{x}} ------------------------------------------
 
 (defn- substitute {:style/indent 1} [sql params]
