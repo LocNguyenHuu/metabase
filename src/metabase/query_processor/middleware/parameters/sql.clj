@@ -413,6 +413,13 @@
     <TOKEN>    := #'(\\w)+'
     WHITESPACE := #'\\s'"))
 
+(def ^:private sql-template-parser2
+  (insta/parser
+   "SQL := (ANYTHING_BUT_BRACE | SINGLE_BRACE_PLUS_ANYTHING | OPTIONAL_CLAUSE)*
+    SINGLE_BRACE_PLUS_ANYTHING := !'[[' '['? ANYTHING_BUT_BRACE !']]' ']'?
+    <ANYTHING_BUT_BRACE> := #'[^\\[\\]]+'
+    OPTIONAL_CLAUSE := <'[['> ANYTHING_BUT_BRACE <']]'>"))
+
 (defrecord ^:private Param [param-key sql-value prepared-statement-args])
 
 (defn- param? [maybe-param]
